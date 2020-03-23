@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parallel Coordinates</title>
+</head>
+<body>
+
+<div id='myDiv'><!-- Plotly chart will be drawn inside this DIV --></div>
+
+<script type="text/javascript" src="static/plotly-latest.min.js"></script>
+
+<script type="text/javascript">
+
+  function cap(array) {
+    const sorted = array.sort();
+    const [lo, hi] = [sorted[Math.floor(sorted.length * 0.10)], sorted[Math.floor(sorted.length * 0.9)]];
+    return array.map((v) => {
+      if (v >= hi) {
+        return hi
+      } else if (v <= lo) {
+        return lo
+      }
+      return v
+    })
+  }
+
+  fetch('data/factors.csv')
+    .then((response) => {
+      return response.text()
+    })
+    .then((content) => {
+      const lines = content.split('\n').map((e) => e.trim());
+      const header = lines[0].split(',');
+      const data = lines.slice(1, -1).map((line) => line.split(','));
+      const nodes = Array(header.length - 1).fill(0).map((e, i) => {
+        return {name: header[i + 1], values: {}};
+      });
+      const codes = data.map((line) => line[0])
+      data.forEach((line) => {
+        const code = line[0];
+        line.slice(1).forEach((v, i) => nodes[i].values[code] = (v === '--' ? null : parseFloat(v)));
+      });
+      const validCodes = codes.filter((code) => {
+        let valid = true;
+        nodes.forEach((node) => valid = valid && (node.values[code] !== null));
+        return valid
+      });
+
+      nodes.forEach((node, i) => {
+        node.values = cap(validCodes.map((code) => node.values[code]))
+      });
+
+      var trace = {
+        type: 'parcoords',
+        line: {color: 'blue'},
+        dimensions: nodes.map((node) => {
+          return {label: node.name, values: node.values};
+        })
+      };
+      Plotly.newPlot('myDiv', [trace]);
+    });
+
+
+</script>
+
+</body>
+</html>
